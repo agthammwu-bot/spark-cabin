@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>火花共振舱 — AMY Spark Cabin</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --surface2: #F1EFE8;
+    --border: #D3D1C7;
+    --border-light: #E8E6DF;
+    --text: #2C2C2A;
+    --text-muted: #888780;
+    --text-faint: #B4B2A9;
+    --amber: #EF9F27;
+    --green: #1D9E75;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --red-border: #F09595;
+  }
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2.5rem 1.5rem;
+  }
+  .container { max-width: 780px; margin: 0 auto; }
+
+  .header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem; }
+  .header h1 { font-size: 24px; font-weight: normal; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .header p { font-size: 13px; color: var(--text-muted); font-family: 'Helvetica Neue', sans-serif; line-height: 1.6; }
+
+  .input-section { margin-bottom: 1.5rem; }
+  .input-section label {
+    display: block; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-faint);
+    font-family: 'Helvetica Neue', sans-serif; margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%; min-height: 140px; padding: 16px;
+    font-size: 14px; line-height: 1.8; font-family: 'Georgia', serif;
+    border: 1px solid var(--border-light); border-radius: 10px;
+    background: var(--surface); color: var(--text); resize: vertical;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { outline: none; border-color: var(--border); }
+  textarea::placeholder { color: var(--text-faint); }
+
+  .run-btn {
+    width: 100%; margin-top: 10px; padding: 13px;
+    font-size: 14px; font-family: 'Helvetica Neue', sans-serif;
+    cursor: pointer; border: none; border-radius: 8px;
+    background: var(--text); color: var(--bg);
+    transition: opacity 0.15s; letter-spacing: 0.02em;
+  }
+  .run-btn:hover { opacity: 0.85; }
+  .run-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .pipeline { display: none; }
+  .pipeline.visible { display: block; }
+
+  .stage { margin-bottom: 1.5rem; }
+  .stage-label {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-faint); font-family: 'Helvetica Neue', sans-serif; margin-bottom: 10px;
+  }
+
+  .agents-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+
+  .agent-card {
+    background: var(--surface); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 14px; transition: border-color 0.3s;
+  }
+  .agent-card.active { border-color: var(--amber); }
+  .agent-card.done { border-color: #9FE1CB; }
+
+  .agent-top { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0; transition: background 0.3s;
+  }
+  .dot.thinking { background: var(--amber); animation: blink 1s infinite; }
+  .dot.done { background: var(--green); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .agent-name { font-size: 12px; font-weight: bold; font-family: 'Helvetica Neue', sans-serif; }
+  .agent-role { font-size: 11px; color: var(--text-faint); font-family: 'Helvetica Neue', sans-serif; margin-bottom: 8px; }
+  .agent-output {
+    font-size: 12px; line-height: 1.7; font-family: 'Helvetica Neue', sans-serif;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 150px; overflow-y: auto; color: var(--text);
+  }
+  .agent-output.faint { color: var(--text-faint); font-style: italic; }
+
+  .arrow { text-align: center; color: var(--text-faint); font-size: 20px; padding: 4px 0 10px; }
+
+  .final-card {
+    background: var(--surface); border: 1px solid var(--border-light);
+    border-radius: 10px; padding: 22px 26px; transition: border-color 0.3s;
+  }
+  .final-card.active { border-color: var(--amber); }
+  .final-top { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-light); }
+  .final-label { font-size: 13px; font-weight: bold; font-family: 'Helvetica Neue', sans-serif; }
+
+  .final-output {
+    font-size: 14px; line-height: 2; font-family: 'Georgia', serif;
+    white-space: pre-wrap; word-break: break-word; color: var(--text);
+  }
+  .final-output.faint { color: var(--text-faint); font-style: italic; font-size: 13px; font-family: 'Helvetica Neue', sans-serif; }
+
+  .bottom-row { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-faint); font-family: 'Helvetica Neue', sans-serif; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .status-dot.active { background: var(--amber); animation: blink 1s infinite; }
+  .status-dot.done { background: var(--green); }
+
+  .copy-btn {
+    padding: 7px 14px; font-size: 12px; font-family: 'Helvetica Neue', sans-serif;
+    cursor: pointer; border: 1px solid var(--border); border-radius: 6px;
+    background: transparent; color: var(--text-muted); display: none;
+  }
+  .copy-btn:hover { background: var(--surface2); }
+  .copy-btn.visible { display: inline-block; }
+
+  .error {
+    margin-top: 12px; padding: 12px 16px;
+    background: var(--red-bg); border: 1px solid var(--red-border);
+    border-radius: 8px; font-size: 13px; color: var(--red);
+    font-family: 'Helvetica Neue', sans-serif; line-height: 1.6;
+  }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>火花共振舱</h1>
+    <p>把一个凌乱的想法丢进来 — 三个 AI 角色并行思考，相互评测，输出 Spark Map</p>
+  </div>
+
+  <div class="input-section">
+    <label>你的想法 / 随笔 / 现场直觉</label>
+    <textarea id="spark-input" placeholder="不需要有逻辑，越凌乱越好。把你今天的观察、感受、脑洞、刷锅水时刻噼里啪啦丢进来……"></textarea>
+    <button class="run-btn" id="run-btn" onclick="runPipeline()">点火 — 让三个角色开始共振</button>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="stage">
+      <div class="stage-label">第一轮 — 独立思考（并行）</div>
+      <div class="agents-grid">
+        <div class="agent-card" id="card-r1a">
+          <div class="agent-top"><div class="dot" id="dot-r1a"></div><span class="agent-name">横向联想员</span></div>
+          <div class="agent-role">跨界联想 · 物理边界 · 类比</div>
+          <div class="agent-output faint" id="out-r1a">等待中…</div>
+        </div>
+        <div class="agent-card" id="card-r1b">
+          <div class="agent-top"><div class="dot" id="dot-r1b"></div><span class="agent-name">逻辑抽象者</span></div>
+          <div class="agent-role">底层母命题 · 系统论 · 规律</div>
+          <div class="agent-output faint" id="out-r1b">等待中…</div>
+        </div>
+        <div class="agent-card" id="card-r1c">
+          <div class="agent-top"><div class="dot" id="dot-r1c"></div><span class="agent-name">现场感监督者</span></div>
+          <div class="agent-role">挑刺 · 还原现场 · 删AI腔</div>
+          <div class="agent-output faint" id="out-r1c">等待中…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="stage">
+      <div class="stage-label">第二轮 — 相爱相杀（看到彼此后评测）</div>
+      <div class="agents-grid">
+        <div class="agent-card" id="card-r2a">
+          <div class="agent-top"><div class="dot" id="dot-r2a"></div><span class="agent-name">横向联想员</span></div>
+          <div class="agent-role">找盲点 · 补跨界联想</div>
+          <div class="agent-output faint" id="out-r2a">等待中…</div>
+        </div>
+        <div class="agent-card" id="card-r2b">
+          <div class="agent-top"><div class="dot" id="dot-r2b"></div><span class="agent-name">逻辑抽象者</span></div>
+          <div class="agent-role">挖逻辑漏洞 · 深挖母命题</div>
+          <div class="agent-output faint" id="out-r2b">等待中…</div>
+        </div>
+        <div class="agent-card" id="card-r2c">
+          <div class="agent-top"><div class="dot" id="dot-r2c"></div><span class="agent-name">现场感监督者</span></div>
+          <div class="agent-role">踢掉表演 · 留下真实</div>
+          <div class="agent-output faint" id="out-r2c">等待中…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <div class="stage">
+      <div class="stage-label">最终输出 — Spark Map</div>
+      <div class="final-card" id="final-card">
+        <div class="final-top">
+          <div class="dot" id="dot-final"></div>
+          <span class="final-label">Spark Map</span>
+        </div>
+        <div class="final-output faint" id="final-out">等待所有轮次完成后生成…</div>
+      </div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">准备就绪</span>
+      </div>
+      <button class="copy-btn" id="copy-btn" onclick="copyResult()">复制 Spark Map</button>
+    </div>
+
+    <div id="error-area"></div>
+  </div>
+</div>
+
+<script>
+const PROMPTS = {
+  r1a: `你是"横向联想员"，性格：好奇、跳跃、喜欢类比。
+任务：对用户的想法进行横向联想和跨界扩展。
+规则：只输出跨界联想、物理/技术/生物类比、相似现象。多用短句和列表，不写长段。严禁感慨、严禁AI腔。字数150字以内。`,
+
+  r1b: `你是"逻辑抽象者"，性格：冷静、深刻、喜欢找规律。
+任务：从用户的想法中提取底层逻辑和母命题。
+规则：只输出底层规律、系统论视角、哲学命题。找事物之间的深层关系。严禁谈具体细节，严禁感慨。字数150字以内。`,
+
+  r1c: `你是"现场感监督者"，性格：务实、挑剔、不容忍废话。
+任务：挑刺、找漏洞、还原现场真实感。
+规则：找想法里的漏洞、未经验证的假设、夸大的部分。删掉任何表演成分，保持人味。直接说哪里不对，不需要客气。字数150字以内。`,
+
+  r2a: `你是"横向联想员"进行第二轮评测。你已经看到另外两位的分析。
+规则：找他们遗漏的跨界联想和盲点。严禁重复他们已经说过的内容。只补充新的角度。字数120字以内。`,
+
+  r2b: `你是"逻辑抽象者"进行第二轮评测。你已经看到另外两位的分析。
+规则：指出他们分析里的逻辑漏洞。进一步挖掘底层母命题，能不能更深一层？严禁重复已有内容。字数120字以内。`,
+
+  r2c: `你是"现场感监督者"进行第二轮评测。你已经看到另外两位的分析。
+规则：踢掉两轮中所有的表演成分和凑字数内容。指出哪些是真正重要的，哪些可以删掉。直接说，不需要客气。字数120字以内。`,
+
+  final: `你是最终整合者。你已经看到三位角色两轮的全部辩论内容。
+任务：整理出一张简洁有力的 Spark Map。
+
+输出格式（严格按此格式）：
+
+【母命题】
+一句话概括核心洞察。
+
+【实例串】
+• 现象 → 洞察
+• 现象 → 洞察
+• 现象 → 洞察
+
+【跨界联想】
+• 其他领域的相似规律
+
+【尚待验证】
+• 还需要检验的假设
+
+【下一步动作】
+• 具体可执行的行动（最多3条）
+
+语言风格：简洁、有力、保持人味。严禁AI腔。总字数不超过400字。`
+};
+
+async function callAPI(system, userMsg) {
+  const res = await fetch('/api/spark', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system, userMsg })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.text;
+}
+
+function setDot(id, state) { document.getElementById('dot-' + id).className = 'dot ' + state; }
+function setCard(id, state) { document.getElementById('card-' + id).className = 'agent-card ' + state; }
+function setOut(id, text, faint) {
+  const el = document.getElementById('out-' + id);
+  el.textContent = text;
+  el.className = 'agent-output' + (faint ? ' faint' : '');
+}
+function setStatus(text, state) {
+  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-dot').className = 'status-dot ' + (state || '');
+}
+
+async function runPipeline() {
+  const input = document.getElementById('spark-input').value.trim();
+  if (!input) return;
+
+  document.getElementById('error-area').innerHTML = '';
+  document.getElementById('copy-btn').className = 'copy-btn';
+  document.getElementById('pipeline').className = 'pipeline visible';
+  document.getElementById('run-btn').disabled = true;
+
+  ['r1a','r1b','r1c','r2a','r2b','r2c'].forEach(id => {
+    setDot(id,''); setCard(id,''); setOut(id,'等待中…',true);
+  });
+  setDot('final','');
+  document.getElementById('final-card').className = 'final-card';
+  document.getElementById('final-out').textContent = '等待所有轮次完成后生成…';
+  document.getElementById('final-out').className = 'final-output faint';
+
+  try {
+    setStatus('第一轮：三个角色并行思考中…','active');
+    ['r1a','r1b','r1c'].forEach(id => { setDot(id,'thinking'); setCard(id,'active'); });
+
+    const msg1 = `用户的想法：\n\n${input}`;
+    const [r1a,r1b,r1c] = await Promise.all([
+      callAPI(PROMPTS.r1a, msg1),
+      callAPI(PROMPTS.r1b, msg1),
+      callAPI(PROMPTS.r1c, msg1),
+    ]);
+    setDot('r1a','done'); setCard('r1a','done'); setOut('r1a',r1a,false);
+    setDot('r1b','done'); setCard('r1b','done'); setOut('r1b',r1b,false);
+    setDot('r1c','done'); setCard('r1c','done'); setOut('r1c',r1c,false);
+
+    setStatus('第二轮：相爱相杀中…','active');
+    ['r2a','r2b','r2c'].forEach(id => { setDot(id,'thinking'); setCard(id,'active'); });
+
+    const ctx = `用户原始想法：\n${input}\n\n第一轮分析：\n\n[横向联想员]：\n${r1a}\n\n[逻辑抽象者]：\n${r1b}\n\n[现场感监督者]：\n${r1c}`;
+    const [r2a,r2b,r2c] = await Promise.all([
+      callAPI(PROMPTS.r2a, ctx),
+      callAPI(PROMPTS.r2b, ctx),
+      callAPI(PROMPTS.r2c, ctx),
+    ]);
+    setDot('r2a','done'); setCard('r2a','done'); setOut('r2a',r2a,false);
+    setDot('r2b','done'); setCard('r2b','done'); setOut('r2b',r2b,false);
+    setDot('r2c','done'); setCard('r2c','done'); setOut('r2c',r2c,false);
+
+    setStatus('整合中，生成 Spark Map…','active');
+    setDot('final','thinking');
+    document.getElementById('final-card').className = 'final-card active';
+
+    const finalCtx = `${ctx}\n\n第二轮评测：\n\n[横向联想员]：\n${r2a}\n\n[逻辑抽象者]：\n${r2b}\n\n[现场感监督者]：\n${r2c}`;
+    const finalOut = await callAPI(PROMPTS.final, finalCtx);
+
+    document.getElementById('final-out').textContent = finalOut;
+    document.getElementById('final-out').className = 'final-output';
+    setDot('final','done');
+    document.getElementById('final-card').className = 'final-card';
+    document.getElementById('copy-btn').className = 'copy-btn visible';
+    setStatus('完成 — Spark Map 已生成','done');
+
+  } catch(err) {
+    setStatus('出错了','');
+    document.getElementById('error-area').innerHTML = `<div class="error">调用失败：${err.message}</div>`;
+  }
+
+  document.getElementById('run-btn').disabled = false;
+}
+
+function copyResult() {
+  const text = document.getElementById('final-out').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '已复制 ✓';
+    setTimeout(() => btn.textContent = '复制 Spark Map', 2000);
+  });
+}
+</script>
+</body>
+</html>
